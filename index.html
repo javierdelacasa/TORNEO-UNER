@@ -109,8 +109,11 @@ const SHEET_PARTIDOS_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vSUtPg
 const SHEET_EQUIPOS_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vSUtPgMkU0zHyb56_fFzxt85FTm7QWAblprbt5JH2Xn7LL9T_sdefp5nvJIHRQLXf3Ty92ChIJ3QBb7/pub?gid=804431110&single=true&output=csv";    // Torneo | Equipo | Fundacion | Estadio | ClubDe | Escudo
 const SHEET_JUGADORES_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vSUtPgMkU0zHyb56_fFzxt85FTm7QWAblprbt5JH2Xn7LL9T_sdefp5nvJIHRQLXf3Ty92ChIJ3QBb7/pub?gid=1308120868&single=true&output=csv";  // Equipo | Posicion (DIR/ARQ/DEF/MED/DEL) | Numero | Nombre | Rol | Nacimiento (DD/MM/AAAA) | Altura | Goles | Amarillas | Rojas
 const SHEET_CAMPEONES_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vSUtPgMkU0zHyb56_fFzxt85FTm7QWAblprbt5JH2Xn7LL9T_sdefp5nvJIHRQLXf3Ty92ChIJ3QBb7/pub?gid=1940575615&single=true&output=csv";  // Torneo | Edicion (ej. 2026 C) | Campeon
-const NOMBRE="Mi Torneo", TORNEO_A="Torneo UNER - Categoría A", TORNEO_B="Torneo UNER - Categoría B";
+const NOMBRE="Torneo UNER", TORNEO_A="Categoría A", TORNEO_B="Categoría B";
+/* Acepta "Categoría A" o "Torneo UNER - Categoría A" en la planilla; en pantalla siempre se ve "Categoría A" / "Categoría B". */
+const canon=t=>{const x=norm(t||"");return /categoriaa$/.test(x)?TORNEO_A:/categoriab$/.test(x)?TORNEO_B:(t||"")};
 const ACTUALIZAR_CADA_SEGUNDOS=60;
+const DESEMPATE_DIRECTO=true; /* true: si hay empate de puntos, define el partido entre ellos y después la diferencia de gol. false: solo diferencia de gol. */
 /* Jornadas de playoffs (columna Jornada): "Cuartos de final", "Semifinal", "Final", "Promoción". Cualquier otra es fase regular. */
 
 /* Colores por posición: y=amarillo, c=celeste, o=naranja, r=rojo */
@@ -127,12 +130,13 @@ function demoP(){
   for(let r=0;r<7;r++){for(let i=0;i<4;i++){const [h,v]=(r+i)%2?[a[i],a[7-i]]:[a[7-i],a[i]];
    add(t,"Fecha "+(r+1),-63+r*7+ti,i%2?"18:00":"16:00",h,(E.indexOf(h)*3+r)%4,(E.indexOf(v)*2+r+1)%3,v)}
    a.splice(1,0,a.pop())}});
- const H="Torneo,Jornada,Fecha,Hora,Local,GolesLocal,GolesVisitante,Visitante,Estado";
+ const H="Torneo,Jornada,Fecha,Hora,Local,GolesLocal,GolesVisitante,Visitante,Estado,Cruce";
  const tmp=leerP(H+"\n"+R.join("\n")),sA=n=>standing(TORNEO_A,tmp)[n-1].n,sB=n=>standing(TORNEO_B,tmp)[n-1].n,Q="Cuartos de final";
  add(TORNEO_A,Q,-5,"16:00",sA(4),2,1,sA(5));add(TORNEO_A,Q,-5,"18:00",sA(3),0,1,sA(6));
  add(TORNEO_A,"Semifinal",0,"18:00",sA(1),1,0,sA(4),"35'");add(TORNEO_A,"Semifinal",0,"20:00",sA(2),"","",sA(6));
  add(TORNEO_B,Q,-4,"16:00",sB(4),1,0,sB(5));add(TORNEO_B,Q,-4,"18:00",sB(2),3,1,sB(7));add(TORNEO_B,Q,-4,"20:00",sB(3),0,2,sB(6));
  add(TORNEO_B,"Semifinal",1,"16:00",sB(1),"","",sB(4));add(TORNEO_B,"Semifinal",1,"18:00",sB(2),"","",sB(6));
+ R.push([TORNEO_A,"Final",dd(1),"20:00","","","","","","F"].join(","));
  return H+"\n"+R.join("\n");
 }
 function demoJ(){
@@ -164,55 +168,82 @@ function iso(s){s=(s||"").trim();let m;
  if(m=s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/))return`${m[3]}-${pad(m[2])}-${pad(m[1])}`;
  if(m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))return`${m[1]}-${pad(m[2])}-${pad(m[3])}`;return""}
 const num=s=>s===""||s==null?null:+s;
-const leerP=t=>rows(t).map(o=>({t:o.torneo||"Torneo",j:o.jornada||"Partidos",f:iso(o.fecha),h:o.hora||"",l:o.local,v:o.visitante,gl:num(o.goleslocal),gv:num(o.golesvisitante),e:o.estado||"",dl:o.detallelocal||"",dv:o.detallevisitante||"",el:o.escudolocal||"",ev:o.escudovisitante||"",pl:num(o.penaleslocal),pv:num(o.penalesvisitante)})).filter(p=>p.l&&p.v);
+const leerP=t=>rows(t).map(o=>({t:canon(o.torneo)||"Torneo",j:o.jornada||"Partidos",f:iso(o.fecha),h:o.hora||"",l:o.local,v:o.visitante,gl:num(o.goleslocal),gv:num(o.golesvisitante),e:o.estado||"",dl:o.detallelocal||"",dv:o.detallevisitante||"",el:o.escudolocal||"",ev:o.escudovisitante||"",pl:num(o.penaleslocal),pv:num(o.penalesvisitante),cr:(o.cruce||"").toUpperCase()})).filter(p=>p.l||p.v||p.cr);
 const fase=j=>/cuarto/i.test(j)?"c":/semi/i.test(j)?"s":/promoci/i.test(j)?"p":/final/i.test(j)?"f":null;
 const jugado=p=>p.gl!==null&&p.gv!==null&&!isNaN(p.gl)&&!isNaN(p.gv);
 const envivo=p=>jugado(p)&&p.e&&norm(p.e)!=="final";
-const torneos=()=>[...new Set(partidos.map(p=>p.t))];
+const torneos=()=>[...new Set([...partidos.map(p=>p.t),...equipos.map(e=>e.torneo)])].filter(Boolean).sort((a,b)=>a.localeCompare(b));
 const fdm=i=>i?i.slice(8)+"/"+i.slice(5,7):"";
 const dcorto=i=>{const[y,m,d]=i.split("-").map(Number);return new Date(y,m-1,d).toLocaleDateString("es-AR",{weekday:"short",day:"2-digit",month:"2-digit"}).replace(/^./,c=>c.toUpperCase())};
 const edad=n=>{const d=iso(n);if(!d)return"";const[y,m,x]=d.split("-").map(Number),h=new Date();let a=h.getFullYear()-y;if(h<new Date(h.getFullYear(),m-1,x))a--;return a};
 const ini=n=>n.split(/\s+/).slice(0,2).map(w=>w[0]||"").join("").toUpperCase();
 const crest=(n,u,s)=>`<span class="cr ${s||""}">${/^https?:\/\//.test(u)?`<img src="${esc(u)}" alt="">`:esc(ini(n))}</span>`;
 const K=(n,u,s)=>crest(n,u||ESC[n],s);
+const NL=p=>p.l||p.lt||"A confirmar",NV=p=>p.v||p.vt||"A confirmar",KX=(n,u)=>n?K(n,u):'<span class="cr">?</span>';
 
 /* ===== LÓGICA ===== */
 function standing(t,L=partidos){
  const T={},e=n=>T[n]||(T[n]={n,pj:0,g:0,e:0,p:0,gf:0,gc:0,vi:0});
  equipos.filter(x=>x.torneo===t&&x.equipo).forEach(x=>e(x.equipo));
- L.filter(p=>p.t===t&&!fase(p.j)).forEach(p=>{const a=e(p.l),b=e(p.v);if(!jugado(p)||envivo(p))return;
+ L.filter(p=>p.t===t&&!fase(p.j)&&p.l&&p.v).forEach(p=>{const a=e(p.l),b=e(p.v);if(!jugado(p)||envivo(p))return;
   a.pj++;b.pj++;a.gf+=p.gl;a.gc+=p.gv;b.gf+=p.gv;b.gc+=p.gl;if(p.gv===0)a.vi++;if(p.gl===0)b.vi++;
   if(p.gl>p.gv){a.g++;b.p++}else if(p.gl<p.gv){b.g++;a.p++}else{a.e++;b.e++}});
- return Object.values(T).map(x=>({...x,dg:x.gf-x.gc,pts:x.g*3+x.e})).sort((a,b)=>b.pts-a.pts||b.dg-a.dg||b.gf-a.gf||a.n.localeCompare(b.n));
+ const arr=Object.values(T).map(x=>({...x,dg:x.gf-x.gc,pts:x.g*3+x.e})),gr={};
+ arr.forEach(x=>(gr[x.pts]=gr[x.pts]||[]).push(x));
+ const reg=L.filter(p=>p.t===t&&!fase(p.j)&&p.l&&p.v&&jugado(p)&&!envivo(p));
+ return Object.keys(gr).map(Number).sort((a,b)=>b-a).flatMap(k=>{const G=gr[k];G.forEach(x=>x.h=0);
+  if(G.length>1&&DESEMPATE_DIRECTO)reg.forEach(p=>{const a=G.find(x=>x.n===p.l),b=G.find(x=>x.n===p.v);if(a&&b){if(p.gl>p.gv)a.h+=3;else if(p.gl<p.gv)b.h+=3;else{a.h++;b.h++}}});
+  return G.sort((a,b)=>b.h-a.h||b.dg-a.dg||b.gf-a.gf||a.n.localeCompare(b.n))});
 }
-function cruce(a,b,f,t){
- const r={a:a||{n:null},b:b||{n:null},m:null,w:null,l:null};
- if(a&&a.n&&b&&b.n){
-  const m=partidos.find(p=>(f==="p"||p.t===t)&&fase(p.j)===f&&((p.l===a.n&&p.v===b.n)||(p.l===b.n&&p.v===a.n)));
-  if(m){r.m=m;if(jugado(m)){const A=m.l===a.n;r.ga=A?m.gl:m.gv;r.gb=A?m.gv:m.gl;
-   if(!envivo(m)){const pa=A?m.pl:m.pv,pb=A?m.pv:m.pl,d=r.ga!==r.gb?r.ga-r.gb:(pa!=null&&pb!=null?pa-pb:0);
-    if(r.ga===r.gb&&pa!=null)r.pen=pa+"-"+pb;if(d>0){r.w=a;r.l=b}else if(d<0){r.w=b;r.l=a}}}}}
+
+function cruce(a,b,f,t,id,sa,sb){
+ a=a||{n:null};b=b||{n:null};
+ const cand=(x,s)=>x.n?[x.n]:(s?[s.a.n,s.b.n].filter(Boolean):[]),CA=cand(a,sa),CB=cand(b,sb),inn=(z,C)=>!!z&&C.includes(z);
+ const mt=p=>{const x=p.l,y=p.v;if(!x&&!y)return false;
+  const o1=(!x||inn(x,CA))&&(!y||inn(y,CB)),o2=(!x||inn(x,CB))&&(!y||inn(y,CA));
+  return(o1||o2)&&(inn(x,CA)||inn(x,CB)||inn(y,CA)||inn(y,CB))};
+ const m=partidos.find(p=>(f==="p"||p.t===t)&&fase(p.j)===f&&(p.cr?p.cr===id:mt(p)));
+ /* si el partido ya nombra a un equipo que venía de un cruce anterior, ese equipo pasó de ronda */
+ if(m&&(!a.n||!b.n)){
+  const d=(inn(m.l,CA)||inn(m.v,CB))?1:(inn(m.l,CB)||inn(m.v,CA))?2:0,na=d===1?m.l:d===2?m.v:"",nb=d===1?m.v:d===2?m.l:"";
+  const adopt=(x,nm,s)=>{if(x.n||!nm)return x;const o=s&&(s.a.n===nm?s.a:s.b.n===nm?s.b:null);
+   if(o&&!s.w){s.w=o;s.l=o===s.a?s.b:s.a}return{...(o||{}),n:nm}};
+  a=adopt(a,na,sa);b=adopt(b,nb,sb);
+ }
+ const lb=x=>x&&x.a.n&&x.b.n?`Ganador ${x.a.n} vs ${x.b.n}`:"";
+ if(!a.n&&!a.t&&lb(sa))a={...a,t:lb(sa)};
+ if(!b.n&&!b.t&&lb(sb))b={...b,t:lb(sb)};
+ const r={a,b,m:m||null,w:null,l:null,id};
+ if(!m)return r;
+ const L=x=>x.n||x.t||"A confirmar";
+ if(a.n&&b.n){if(!m.l&&!m.v){m.l=a.n;m.v=b.n}else if(!m.l)m.l=m.v===a.n?b.n:a.n;else if(!m.v)m.v=m.l===a.n?b.n:a.n}
+ else if(!m.l&&!m.v){m.lt=L(a);m.vt=L(b)}
+ else if(!m.l)m.lt=m.v===a.n?L(b):L(a);
+ else if(!m.v)m.vt=m.l===a.n?L(b):L(a);
+ if(a.n&&b.n&&jugado(m)){const A=m.l===a.n;r.ga=A?m.gl:m.gv;r.gb=A?m.gv:m.gl;
+  if(!envivo(m)){const pa=A?m.pl:m.pv,pb=A?m.pv:m.pl,d=r.ga!==r.gb?r.ga-r.gb:(pa!=null&&pb!=null?pa-pb:0);
+   if(r.ga===r.gb&&pa!=null)r.pen=pa+"-"+pb;if(d>0){r.w=a;r.l=b}else if(d<0){r.w=b;r.l=a}}}
  return r;
 }
 function bracket(t){
- const st=standing(t),Sd=n=>st[n-1]&&{n:st[n-1].n,s:n},c=(a,b,f)=>cruce(a,b,f,t);
- const q4=c(Sd(4),Sd(5),"c");
- if(t===TORNEO_A){const q2=c(Sd(3),Sd(6),"c"),s1=c(Sd(1),q4.w,"s"),s2=c(Sd(2),q2.w,"s"),f=c(s1.w,s2.w,"f");
+ const st=standing(t),Sd=n=>st[n-1]&&{n:st[n-1].n,s:n},c=(a,b,f,id,sa,sb)=>cruce(a,b,f,t,id,sa,sb);
+ const q4=c(Sd(4),Sd(5),"c","C1");
+ if(t===TORNEO_A){const q2=c(Sd(3),Sd(6),"c","C2"),s1=c(Sd(1),q4.w,"s","S1",null,q4),s2=c(Sd(2),q2.w,"s","S2",null,q2),f=c(s1.w,s2.w,"f","F",s1,s2);
   return{cols:[["Cuartos de final",[q4,q2]],["Semifinales",[s1,s2]],["Final",[f]]],f}}
- const q2=c(Sd(2),Sd(7),"c"),q3=c(Sd(3),Sd(6),"c"),s1=c(Sd(1),q4.w,"s"),s2=c(q2.w,q3.w,"s"),f=c(s1.w,s2.w,"f");
+ const q2=c(Sd(2),Sd(7),"c","C2"),q3=c(Sd(3),Sd(6),"c","C3"),s1=c(Sd(1),q4.w,"s","S1",null,q4),s2=c(q2.w,q3.w,"s","S2",q2,q3),f=c(s1.w,s2.w,"f","F",s1,s2);
  return{cols:[["Cuartos de final",[q4,q2,q3]],["Semifinales",[s1,s2]],["Final",[f]]],f};
 }
 function promo(){const a7=standing(TORNEO_A)[6],bl=bracket(TORNEO_B).f.l;
- return cruce(a7&&{n:a7.n,s:"7°"},bl&&{n:bl.n},"p",TORNEO_A)}
+ return cruce(a7?{n:a7.n,s:"7°"}:{n:null,t:"7° de Categoría A"},bl?{n:bl.n}:{n:null,t:"Perdedor final Categoría B"},"p",TORNEO_A,"P")}
 
 /* ===== VISTAS ===== */
 function tie(r){
- const L=(x,g,w)=>`<div class="tl ${x.n?"":"tbd"} ${r.w?(w?"w":"x"):""}"><i>${x.s??""}</i><span>${esc(x.n||"A confirmar")}</span><b>${g==null?"":g}</b></div>`;
+ const L=(x,g,w)=>`<div class="tl ${x.n?"":"tbd"} ${r.w?(w?"w":"x"):""}"><i>${x.s??""}</i><span>${esc(x.n||x.t||"A confirmar")}</span><b>${g==null?"":g}</b></div>`;
  const m=r.m;
  return `<div class="tie">${L(r.a,r.ga,r.w===r.a)}${L(r.b,r.gb,r.w===r.b)}${m&&!jugado(m)?`<div class="cap">${fdm(m.f)} ${esc(m.h)}</div>`:""}${m&&envivo(m)?`<div class="cap live">${esc(m.e)}</div>`:""}${r.pen?`<div class="cap">Penales ${r.pen}</div>`:""}</div>`;
 }
 function filas(l){return l.map(p=>{const ok=jugado(p),lv=envivo(p);
- return `<div class="m"><div class="st ${lv?"live":""}">${esc(ok?(p.e||"Final"):p.h)}</div><div><div class="ln"><span class="th">${esc(p.l)}</span>${K(p.l,p.el)}<span class="sc ${lv?"live":""}">${ok?`${p.gl} - ${p.gv}`:"-"}</span>${K(p.v,p.ev)}<span class="ta">${esc(p.v)}</span></div>${p.dl||p.dv?`<div class="det"><div>${esc(p.dl)}</div><div>${esc(p.dv)}</div></div>`:""}</div></div>`}).join("")}
+ return `<div class="m"><div class="st ${lv?"live":""}">${esc(ok?(p.e||"Final"):p.h)}</div><div><div class="ln"><span class="th">${esc(NL(p))}</span>${KX(p.l,p.el)}<span class="sc ${lv?"live":""}">${ok?`${p.gl} - ${p.gv}`:"-"}</span>${KX(p.v,p.ev)}<span class="ta">${esc(NV(p))}</span></div>${p.dl||p.dv?`<div class="det"><div>${esc(p.dl)}</div><div>${esc(p.dv)}</div></div>`:""}</div></div>`}).join("")}
 function lblDia(){if(dia===hoyISO())return"Partidos de hoy";const[y,m,d]=dia.split("-").map(Number);return new Date(y,m-1,d).toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"})}
 function inicio(){
  const del=partidos.filter(p=>p.f===dia).sort((a,b)=>a.h.localeCompare(b.h)),nV=del.filter(envivo).length,l=filtro==="vivo"?del.filter(envivo):del;
@@ -237,7 +268,7 @@ function tempo(t){
  if(!js.includes(jor[t]))jor[t]=js.find(j=>partidos.some(p=>p.t===t&&p.j===j&&(!jugado(p)||envivo(p))))||js[js.length-1];
  const i=js.indexOf(jor[t]),L=partidos.filter(p=>p.t===t&&p.j===jor[t]).sort((a,b)=>(a.f+a.h).localeCompare(b.f+b.h));let last=null,h="";
  L.forEach(p=>{if(p.f!==last){last=p.f;h+=`<div class="dh">${p.f?dcorto(p.f):"Sin fecha"}</div>`}const ok=jugado(p),lv=envivo(p);
-  h+=`<div class="mf"><span class="${lv?"live":""}">${esc(ok?(p.e||"Final"):p.h)}</span><span>${esc(p.l)}</span><b class="${lv?"live":""}">${ok?`${p.gl}-${p.gv}`:"-"}</b><span style="text-align:left">${esc(p.v)}</span></div>`});
+  h+=`<div class="mf"><span class="${lv?"live":""}">${esc(ok?(p.e||"Final"):p.h)}</span><span>${esc(NL(p))}</span><b class="${lv?"live":""}">${ok?`${p.gl}-${p.gv}`:"-"}</b><span style="text-align:left">${esc(NV(p))}</span></div>`});
  return `<section class="box"><div class="bh c">Temporada</div><div class="pager"><button id="jp" aria-label="Anterior" ${i<=0?"disabled":""}>‹</button><span>${esc(jor[t])}</span><button id="jn" aria-label="Siguiente" ${i>=js.length-1?"disabled":""}>›</button></div>${h}</section>`;
 }
 function tFix(t){
@@ -275,8 +306,8 @@ function pEquipo(){
  const riv=p=>p.l===eq?p.v:p.l;
  const P=jug.filter(j=>j.equipo===eq),G={DIR:"DIR",DT:"DIR",ARQ:"ARQ",DEF:"DEF",MED:"MED",DEL:"DEL"};
  const top=k=>P.filter(j=>+j[k]>0).sort((a,b)=>b[k]-a[k]).map(j=>[j.nombre,j[k]]);
- let pl="";["DIR","ARQ","DEF","MED","DEL"].forEach(g=>{const L=P.filter(j=>G[(j.posicion||"").toUpperCase().slice(0,3)]===g);
-  if(L.length)pl+=`<tr class="sec"><td colspan="4">${g}</td></tr>`+L.map(j=>`<tr><td class="l"><span class="cr s">${esc(j.numero)}</span><b>${esc(j.nombre)}</b>${j.rol?`<small>${esc(j.rol)}</small>`:""}</td><td>${edad(j.nacimiento)}</td><td>${esc(j.nacimiento)}</td><td>${esc(j.altura)}</td></tr>`).join("")});
+ let pl="";["DIR","ARQ","DEF","MED","DEL","OTROS"].forEach(g=>{const L=P.filter(j=>(G[(j.posicion||"").toUpperCase().slice(0,3)]||"OTROS")===g).sort((x,y)=>(+x.numero||999)-(+y.numero||999)||x.nombre.localeCompare(y.nombre));
+  if(L.length)pl+=`<tr class="sec"><td colspan="4">${g==="OTROS"?"JUGADORES":g}</td></tr>`+L.map(j=>`<tr><td class="l"><span class="cr s">${esc(j.numero)||"•"}</span><b>${esc(j.nombre)}</b>${j.rol?`<small>${esc(j.rol)}</small>`:""}</td><td>${edad(j.nacimiento)}</td><td>${esc(j.nacimiento)}</td><td>${esc(j.altura)}</td></tr>`).join("")});
  const tb=(ti,h,b)=>`<section class="box"><div class="bh">${ti}</div><div class="scroll"><table><thead><tr>${h}</tr></thead><tbody>${b||`<tr><td colspan="9">Sin datos</td></tr>`}</tbody></table></div></section>`;
  const kv=(a,b)=>b?`<div class="kv"><span>${a}</span><b>${esc(b)}</b></div>`:"";
  return `<div class="crumb"><button data-t="${esc(t)}">${esc(t)}</button> › <b>${esc(eq)}</b></div><h2 class="tt">${K(eq)}${esc(eq)}</h2>
@@ -295,7 +326,7 @@ function pCal(){
   if(cu.length)h+=`<div class="gt y">Cumpleaños</div>`+cu.map(j=>`<div class="ci"><b>${esc(j.nombre)}</b>(${esc(j.equipo)})<small>cumple hoy ${y-(+iso(j.nacimiento).slice(0,4))} años</small></div>`).join("");
   if(an.length)h+=`<div class="gt a">Aniversario</div>`+an.map(e=>`<div class="ci"><b>${esc(e.equipo)}</b><small>cumple hoy ${y-(+iso(e.fundacion).slice(0,4))} años desde su fundación</small></div>`).join("");
   const L=partidos.filter(p=>p.f===d).sort((a,b)=>a.t.localeCompare(b.t)||a.h.localeCompare(b.h));
-  [...new Set(L.map(p=>p.t))].forEach(t=>{h+=`<button class="gt" data-t="${esc(t)}">${esc(t)}</button>`+L.filter(p=>p.t===t).map(p=>`<div class="ci"><b>${esc(p.h)}</b>${esc(p.l)} ${jugado(p)?`${p.gl}-${p.gv}`:"VS"} ${esc(p.v)}</div>`).join("")});
+  [...new Set(L.map(p=>p.t))].forEach(t=>{h+=`<button class="gt" data-t="${esc(t)}">${esc(t)}</button>`+L.filter(p=>p.t===t).map(p=>`<div class="ci"><b>${esc(p.h)}</b>${esc(NL(p))} ${jugado(p)?`${p.gl}-${p.gv}`:"VS"} ${esc(NV(p))}</div>`).join("")});
   return `<div class="cc"><div class="ch ${d===hoy?"hoy":""}"><small>${d===hoy?"Hoy":N[i]}</small><b>${fdm(d)}</b></div>${h}</div>`};
  return `<div class="head"><div class="dayrow"><button class="ar" id="cp" aria-label="Semana anterior" style="font-size:17px">‹ Atrás</button><span class="lab">Calendario</span><button class="ar" id="cn" aria-label="Semana siguiente" style="font-size:17px">Siguiente ›</button></div></div><div class="box scroll"><div class="cal7">`+[0,1,2,3,4,5,6].map(i=>col(sumar(lun,i),i)).join("")+`</div></div>`;
 }
@@ -326,8 +357,9 @@ async function cargar(){
  try{[a,b,c,d]=await Promise.all([bajar(SHEET_PARTIDOS_URL,demoP,1),bajar(SHEET_EQUIPOS_URL,demoE),bajar(SHEET_JUGADORES_URL,demoJ),bajar(SHEET_CAMPEONES_URL,demoC)])}
  catch(e){console.error(e);if(primera)$("#app").innerHTML=`<div class="msg">No se pudo descargar la planilla.<br><small>${esc(e.message||e)}</small><br><small>Revisá que las pestañas estén publicadas en la web como CSV y que la página esté abierta desde un hosting (no desde una vista previa).</small></div>`;primera=false;return}
  try{
-  partidos=leerP(a);equipos=rows(b);jug=rows(c);camp=rows(d);ESC={};
+  partidos=leerP(a);equipos=rows(b).map(e=>({...e,torneo:canon(e.torneo)}));jug=rows(c);camp=rows(d).map(e=>({...e,torneo:canon(e.torneo)}));ESC={};
   partidos.forEach(p=>{if(p.el)ESC[p.l]=p.el;if(p.ev)ESC[p.v]=p.ev});equipos.forEach(e=>{if(e.escudo)ESC[e.equipo]=e.escudo});
+  try{bracket(TORNEO_A);bracket(TORNEO_B);promo()}catch(e){console.warn(e)}
   $("#foot").textContent=(SHEET_PARTIDOS_URL?"":"Datos de ejemplo. ")+"Actualizado a las "+new Date().toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});
   pintar();
  }catch(e){console.error(e);if(primera)$("#app").innerHTML=`<div class="msg">Error al mostrar los datos.<br><small>${esc(e.message||e)}</small></div>`}
