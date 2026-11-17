@@ -330,7 +330,9 @@ function pCal(){
   return `<div class="cc"><div class="ch ${d===hoy?"hoy":""}"><small>${d===hoy?"Hoy":N[i]}</small><b>${fdm(d)}</b></div>${h}</div>`};
  return `<div class="head"><div class="dayrow"><button class="ar" id="cp" aria-label="Semana anterior" style="font-size:17px">‹ Atrás</button><span class="lab">Calendario</span><button class="ar" id="cn" aria-label="Semana siguiente" style="font-size:17px">Siguiente ›</button></div></div><div class="box scroll"><div class="cal7">`+[0,1,2,3,4,5,6].map(i=>col(sumar(lun,i),i)).join("")+`</div></div>`;
 }
-function abrirFecha(){const f=$("#fecha");f.value=dia;try{f.showPicker()}catch(e){f.focus()}}
+function abrirFecha(){const f=$("#fecha"),r=($("#lab")||$("#cal")).getBoundingClientRect();
+ f.style.cssText=`position:fixed;left:${r.left}px;top:${r.bottom}px;width:${r.width}px;height:1px;opacity:0;pointer-events:none`;
+ f.value=dia;try{f.showPicker()}catch(e){f.focus()}}
 function pintar(){
  $("#menu").innerHTML=abierto?torneos().map(t=>`<button class="it" data-t="${esc(t)}" aria-current="${S.t===t&&S.k!=="inicio"}">${esc(t)}</button>`).join(""):"";
  $("#chev").textContent=abierto?"⌃":"⌄";
