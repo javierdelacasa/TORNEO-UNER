@@ -8,7 +8,7 @@
 <style>
 :root{--panel:#0b2f1d;--row:#0d3721;--line:#2b5a41;--mute:#9fc0ab;--link:#6fae4a;--live:#ff4b4b;--y:#f2c94c;--c:#1ea7ff;--o:#ff9f1c;--r:#e0314b}
 *{box-sizing:border-box}
-body{margin:0;color:#fff;font:16px/1.25 "Roboto Condensed","Arial Narrow",Arial,sans-serif;min-height:100vh;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .02 0 0 0 0 .18 0 0 0 0 .08 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),radial-gradient(ellipse 70% 45% at 20% 5%,#1f7a4766,transparent),radial-gradient(ellipse 60% 50% at 90% 70%,#06220f99,transparent),#0f4a2a;background-attachment:fixed}
+body{margin:0;color:#fff;font:16px/1.25 "Roboto Condensed","Arial Narrow",Arial,sans-serif;min-height:100vh;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .03 0 0 0 0 .16 0 0 0 0 .09 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),radial-gradient(circle at 12% 18%,#2a6e4a40 0,transparent 32%),radial-gradient(circle at 88% 62%,#2a6e4a33 0,transparent 36%),radial-gradient(circle at 40% 92%,#0a2e1c55 0,transparent 40%),#11452e;background-attachment:fixed}
 button{font:inherit;color:inherit;cursor:pointer;background:none;border:0}
 button:focus-visible,input:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .top,.layout,footer{max-width:1000px;margin:0 auto}
@@ -79,7 +79,6 @@ td.p{width:34px;color:var(--mute)}td.l button{display:flex;align-items:center;ga
 .cc .gt.y{background:var(--y);color:#111}.cc .gt.a{background:#e6f58a;color:#111}
 .ci{background:#fff;color:#111;padding:6px 8px;font-size:13px;margin-top:2px}.ci b{display:block}.ci small{display:block;font-size:12px}
 footer{padding:0 16px 24px;color:var(--mute);font-size:13px}
-#fecha{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
 @media(max-width:760px){
  .layout{grid-template-columns:1fr}.grid2,.sg{grid-template-columns:1fr}
  aside{display:flex;gap:4px;overflow-x:auto;align-items:center}aside .gh,aside hr{display:none}
@@ -98,7 +97,6 @@ footer{padding:0 16px 24px;color:var(--mute);font-size:13px}
  </aside>
  <main id="app"><div class="msg">Cargando…</div></main>
 </div>
-<input type="date" id="fecha" aria-label="Elegir fecha" tabindex="-1">
 <footer id="foot"></footer>
 
 <script>
@@ -248,7 +246,7 @@ function lblDia(){if(dia===hoyISO())return"Partidos de hoy";const[y,m,d]=dia.spl
 function inicio(){
  const del=partidos.filter(p=>p.f===dia).sort((a,b)=>a.h.localeCompare(b.h)),nV=del.filter(envivo).length,l=filtro==="vivo"?del.filter(envivo):del;
  const bl=torneos().map(t=>[t,l.filter(p=>p.t===t)]).filter(x=>x[1].length);
- return `<div class="head"><div class="dayrow"><button class="ar" id="prev" aria-label="Día anterior">‹</button><button class="lab" id="lab">${esc(lblDia())} ▾</button><button class="ar" id="next" aria-label="Día siguiente">›</button></div>
+ return `<div class="head"><div class="dayrow"><button class="ar" id="prev" aria-label="Día anterior">‹</button><span class="lab">${esc(lblDia())}</span><button class="ar" id="next" aria-label="Día siguiente">›</button></div>
  <div class="tabs"><button data-f="todos" aria-selected="${filtro==="todos"}">Todos</button><button data-f="vivo" aria-selected="${filtro==="vivo"}">Vivo (${nV})</button></div></div>
  <p class="sub">Resultados y tablas de posiciones de ${esc(NOMBRE)}</p>`+
  (bl.length?bl.map(([t,x])=>`<section class="box"><div class="bh"><button data-t="${esc(t)}">${esc(t)}</button></div>${filas(x)}<button class="more" data-t="${esc(t)}">Sección de ${esc(t)} ›</button></section>`).join(""):`<div class="msg">${filtro==="vivo"?"No hay partidos en vivo.":"No hay partidos para este día."}</div>`);
@@ -281,7 +279,7 @@ function tFix(t){
 function tEq(t){
  const st=standing(t),names=st.map(x=>x.n).sort((a,b)=>a.localeCompare(b)),pj=st.filter(x=>x.pj),f2=v=>+v.toFixed(2);
  const sum=(n,k)=>jug.filter(j=>j.equipo===n).reduce((s,j)=>s+(+j[k]||0),0);
- const C=[["Goles",pj.map(x=>[x.n,f2(x.gf/x.pj)]).sort((a,b)=>b[1]-a[1])],["Goles recibidos",pj.map(x=>[x.n,f2(x.gc/x.pj)]).sort((a,b)=>a[1]-b[1])],["Valla invicta",st.map(x=>[x.n,x.vi]).sort((a,b)=>b[1]-a[1])],
+ const C=[["Goles por partido",pj.map(x=>[x.n,f2(x.gf/x.pj)]).sort((a,b)=>b[1]-a[1])],["Goles recibidos por partido",pj.map(x=>[x.n,f2(x.gc/x.pj)]).sort((a,b)=>a[1]-b[1])],["Valla invicta",st.map(x=>[x.n,x.vi]).sort((a,b)=>b[1]-a[1])],
   ["Tarjetas rojas",names.map(n=>[n,sum(n,"rojas")]).sort((a,b)=>b[1]-a[1])],["Tarjetas amarillas",names.map(n=>[n,sum(n,"amarillas")]).sort((a,b)=>b[1]-a[1])]];
  return `<section class="box"><div class="bh c">Equipos</div><div class="tg">`+names.map(n=>`<button data-eq="${esc(n)}">${K(n)}<span>${esc(n)}</span></button>`).join("")+`</div></section>
  <section class="box"><div class="bh c">Estadísticas de equipos</div><div class="sg">`+C.map(([ti,f])=>caja(t+ti,ti,f,1)).join("")+`</div></section>`;
@@ -330,9 +328,6 @@ function pCal(){
   return `<div class="cc"><div class="ch ${d===hoy?"hoy":""}"><small>${d===hoy?"Hoy":N[i]}</small><b>${fdm(d)}</b></div>${h}</div>`};
  return `<div class="head"><div class="dayrow"><button class="ar" id="cp" aria-label="Semana anterior" style="font-size:17px">‹ Atrás</button><span class="lab">Calendario</span><button class="ar" id="cn" aria-label="Semana siguiente" style="font-size:17px">Siguiente ›</button></div></div><div class="box scroll"><div class="cal7">`+[0,1,2,3,4,5,6].map(i=>col(sumar(lun,i),i)).join("")+`</div></div>`;
 }
-function abrirFecha(){const f=$("#fecha"),r=($("#lab")||$("#cal")).getBoundingClientRect();
- f.style.cssText=`position:fixed;left:${r.left}px;top:${r.bottom}px;width:${r.width}px;height:1px;opacity:0;pointer-events:none`;
- f.value=dia;try{f.showPicker()}catch(e){f.focus()}}
 function pintar(){
  $("#menu").innerHTML=abierto?torneos().map(t=>`<button class="it" data-t="${esc(t)}" aria-current="${S.t===t&&S.k!=="inicio"}">${esc(t)}</button>`).join(""):"";
  $("#chev").textContent=abierto?"⌃":"⌄";
@@ -343,12 +338,11 @@ function pintar(){
  all("[data-tab]").forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;pintar()});
  all("[data-v]").forEach(b=>b.onclick=()=>{const k=b.dataset.v;ver.has(k)?ver.delete(k):ver.add(k);pintar()});
  all("[data-f]").forEach(b=>b.onclick=()=>{filtro=b.dataset.f;pintar()});
- if($("#prev")){$("#prev").onclick=()=>{dia=sumar(dia,-1);pintar()};$("#next").onclick=()=>{dia=sumar(dia,1);pintar()};$("#lab").onclick=abrirFecha}
+ if($("#prev")){$("#prev").onclick=()=>{dia=sumar(dia,-1);pintar()};$("#next").onclick=()=>{dia=sumar(dia,1);pintar()}}
  if($("#cp")){$("#cp").onclick=()=>{sem--;pintar()};$("#cn").onclick=()=>{sem++;pintar()}}
  const js=()=>[...new Set(partidos.filter(p=>p.t===S.t).map(p=>p.j))];
  if($("#jp")){$("#jp").onclick=()=>{const l=js();jor[S.t]=l[l.indexOf(jor[S.t])-1];pintar()};$("#jn").onclick=()=>{const l=js();jor[S.t]=l[l.indexOf(jor[S.t])+1];pintar()}}
 }
-$("#fecha").onchange=e=>{if(e.target.value){dia=e.target.value;S={k:"inicio"};pintar()}};
 $("#cal").onclick=()=>{S={k:"cal"};sem=0;pintar();scrollTo(0,0)};
 $("#gd").onclick=()=>{abierto=!abierto;pintar()};
 $("#logo").onclick=()=>{S={k:"inicio"};dia=hoyISO();pintar()};
